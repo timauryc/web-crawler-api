@@ -2,17 +2,14 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const urlPrefix = "https://lista.mercadolivre.com.br";
 
-queryItems(query, pages).then((resultsArray) => {
-   return resultsArray.reduce((acum, val) => acum.concat(val), [])
-})
-
-async function queryItems(query, pages) {
-    let urls = prepareURLS(query, pages)
+async function queryItems(query, limit) {
+    let urls = prepareURLS(query, limit)
     return Promise.all(urls.map(getQueryPage))
 }
 
 
-function prepareURLS(query, pages) {
+function prepareURLS(query, limit) {
+    let pages = Math.ceil(limit / 48)
     let urlsArray = []
     for (let i = 0; i < pages; i++) {
         if (i == 0)
@@ -31,7 +28,6 @@ async function getQueryPage(url) {
             const html = res.data;
             const $ = cheerio.load(html);
             const results = $('ol#searchResults li.results-item');
-            console.log(results.length)
             let resultsArray = []
             let storePromises = []
             results.each(async function () {
@@ -40,7 +36,7 @@ async function getQueryPage(url) {
                 resultsArray.push({
                     name: $(this).find('.main-title').text(),
                     link: link,
-                    price: $(this).find('.price__fraction').text() + ($(this).find('.price__decimals').text() ? "." + $(this).find('.price__decimals').text() : "")
+                    price: $(this).find('.price__fraction').text() + ($(this).find('.price__decimals').text() ? "." + $(this).find('.price__decimals').text() : ""),
                 })
             });
             Promise.all(storePromises)
@@ -68,7 +64,6 @@ async function getStore(link) {
 
 
 async function fetchData(url) {
-    //console.log(`Crawling data from ${url}`)
     // make http call to url
     let response = await axios(url).catch((err) => console.log(err));
 
